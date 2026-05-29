@@ -1,0 +1,16 @@
+{
+  "name": "moneyexchange",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "vue",
+    "svelte"
+  ],
+  "scripts": {
+    "dev:vue": "npm --workspace vue run dev -- --port 5173",
+    "dev:svelte": "npm --workspace svelte run dev -- --port 5174",
+    "build:vue": "npm --workspace vue run build",
+    "build:svelte": "npm --workspace svelte run build",
+    "test:api": "node shared/services/currencyService.test.mjs"
+  }
+}
