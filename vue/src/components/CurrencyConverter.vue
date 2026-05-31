@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import ConversionHistory from './ConversionHistory.vue'
 import ConversionResult from './ConversionResult.vue'
 import CurrencySelect from './CurrencySelect.vue'
 import FavoritePairs from './FavoritePairs.vue'
@@ -15,6 +16,8 @@ const loadingCurrencies = ref(false)
 const converting = ref(false)
 // Favoritos locales: se pierden al recargar, suficiente para esta feature simple.
 const favorites = ref([])
+// Historial local de conversiones recientes, pensado para comparar reactividad Vue/Svelte.
+const history = ref([])
 
 // Evita habilitar conversiones cuando faltan datos o ya hay una en curso.
 const canConvert = computed(() => {
@@ -58,7 +61,7 @@ async function loadCurrencies() {
   }
 }
 
-async function handleConvert() {
+async function handleConvert(options = {}) {
   // La misma funcion sirve para el boton y para cambios en monto/selects.
   if (!canConvert.value) return
 
@@ -66,11 +69,17 @@ async function handleConvert() {
   error.value = ''
 
   try {
-    result.value = await convertCurrency({
+    const conversion = await convertCurrency({
       amount: amount.value,
       from: fromCurrency.value,
       to: toCurrency.value
     })
+
+    result.value = conversion
+
+    if (options.saveHistory) {
+      addHistoryEntry(conversion)
+    }
   } catch (currentError) {
     result.value = null
     error.value = getErrorMessage(currentError)
@@ -113,6 +122,27 @@ function removeFavorite(favoriteToRemove) {
   })
 }
 
+function addHistoryEntry(conversion) {
+  const entry = {
+    id: `${Date.now()}-${conversion.from}-${conversion.to}`,
+    amount: conversion.amount,
+    from: conversion.from,
+    to: conversion.to,
+    convertedAmount: conversion.convertedAmount,
+    createdAt: new Date().toLocaleTimeString('es-CL', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  history.value.unshift(entry)
+  history.value.splice(5)
+}
+
+function clearHistory() {
+  history.value = []
+}
+
 // Normaliza errores desconocidos.
 function getErrorMessage(currentError) {
   return currentError instanceof Error ? currentError.message : 'Ocurrio un error inesperado.'
@@ -120,7 +150,7 @@ function getErrorMessage(currentError) {
 </script>
 
 <template>
-  <form class="converter" @submit.prevent="handleConvert">
+  <form class="converter" @submit.prevent="handleConvert({ saveHistory: true })">
     <label class="field">
       <span>Monto</span>
       <input
@@ -177,6 +207,8 @@ function getErrorMessage(currentError) {
     <p v-else-if="error" class="status status-error">{{ error }}</p>
 
     <ConversionResult v-if="result" :result="result" />
+
+    <ConversionHistory :history="history" @clear="clearHistory" />
 
     <FavoritePairs
       :favorites="favorites"

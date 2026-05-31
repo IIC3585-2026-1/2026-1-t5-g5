@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte'
+  import ConversionHistory from './ConversionHistory.svelte'
   import ConversionResult from './ConversionResult.svelte'
   import CurrencySelect from './CurrencySelect.svelte'
   import FavoritePairs from './FavoritePairs.svelte'
@@ -15,6 +16,8 @@
   let converting = false
   // Favoritos locales, se pierden al recargar.
   let favorites = []
+  // Historial local de conversiones recientes, pensado para comparar reactividad Vue/Svelte.
+  let history = []
 
   // Valor reactivo que evita convertir si faltan datos o ya hay una conversion en curso.
   $: canConvert = amount !== '' && fromCurrency && toCurrency && !converting
@@ -44,7 +47,7 @@
     }
   }
 
-  async function handleConvert(event) {
+  async function handleConvert(event, options = {}) {
     // Evita que el submit del formulario recargue la pagina.
     event?.preventDefault()
 
@@ -55,11 +58,17 @@
     error = ''
 
     try {
-      result = await convertCurrency({
+      const conversion = await convertCurrency({
         amount,
         from: fromCurrency,
         to: toCurrency
       })
+
+      result = conversion
+
+      if (options.saveHistory) {
+        addHistoryEntry(conversion)
+      }
     } catch (currentError) {
       result = null
       error = getErrorMessage(currentError)
@@ -99,13 +108,34 @@
     })
   }
 
+  function addHistoryEntry(conversion) {
+    const entry = {
+      id: `${Date.now()}-${conversion.from}-${conversion.to}`,
+      amount: conversion.amount,
+      from: conversion.from,
+      to: conversion.to,
+      convertedAmount: conversion.convertedAmount,
+      createdAt: new Date().toLocaleTimeString('es-CL', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    // En Svelte, reasignar la variable es la forma clara de disparar la actualizacion en la UI.
+    history = [entry, ...history].slice(0, 5)
+  }
+
+  function clearHistory() {
+    history = []
+  }
+
   // Normaliza errores desconocidos.
   function getErrorMessage(currentError) {
     return currentError instanceof Error ? currentError.message : 'Ocurrio un error inesperado.'
   }
 </script>
 
-<form class="converter" onsubmit={handleConvert}>
+<form class="converter" onsubmit={(event) => handleConvert(event, { saveHistory: true })}>
   <label class="field">
     <span>Monto</span>
     <input
@@ -173,6 +203,8 @@
   {#if result}
     <ConversionResult {result} />
   {/if}
+
+  <ConversionHistory {history} onClear={clearHistory} />
 
   <FavoritePairs
     {favorites}

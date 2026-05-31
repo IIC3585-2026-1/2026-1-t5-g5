@@ -60,6 +60,7 @@ vue/
     │   ├── CurrencyConverter.vue
     │   ├── CurrencySelect.vue
     │   ├── ConversionResult.vue
+    │   ├── ConversionHistory.vue
     │   └── FavoritePairs.vue
     ├── services/
     └── stores/
@@ -70,6 +71,7 @@ svelte/
     │   ├── CurrencyConverter.svelte
     │   ├── CurrencySelect.svelte
     │   ├── ConversionResult.svelte
+    │   ├── ConversionHistory.svelte
     │   └── FavoritePairs.svelte
     ├── services/
     └── stores/
@@ -93,3 +95,13 @@ La logica reutilizable vive en `shared/services/currencyService.js` y se re-expo
 ```bash
 npm run test:api
 ```
+
+## Uso de IA en el proyecto
+
+Durante el desarrollo se usó IA como apoyo para investigar APIs de tasas de cambio que no requirieran API key. A partir de esa revisión se eligió Frankfurter API, ya que permite obtener monedas y tasas actuales de forma simple.
+
+También se usó IA para organizar el trabajo en tarjetas pequeñas de Jira, principalmente la estructura base del proyecto, integración de API, conversor principal, intercambio de monedas, favoritos e historial.
+
+En la versión Vue, la IA se usó principalmente como apoyo para revisar, ordenar y corregir código. Luego, tomando esa base, se utilizó para traducir la misma funcionalidad a Svelte, manteniendo una estructura equivalente entre ambos frameworks.
+
+Finalmente, se usó IA para pensar una funcionalidad que permitiera comparar mejor la actualización de variables entre Vue y Svelte. De esa idea surgió el historial de conversiones, donde Vue actualiza un `ref` con `history.value`, mientras que Svelte actualiza la interfaz reasignando directamente `history`.
