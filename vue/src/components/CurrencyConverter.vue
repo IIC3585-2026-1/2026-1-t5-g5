@@ -1,5 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import ConversionResult from './ConversionResult.vue'
+import CurrencySelect from './CurrencySelect.vue'
+import FavoritePairs from './FavoritePairs.vue'
 import { convertCurrency, getCurrencies } from '../services/currencyService'
 
 const amount = ref(100)
@@ -10,10 +13,31 @@ const result = ref(null)
 const error = ref('')
 const loadingCurrencies = ref(false)
 const converting = ref(false)
+// Favoritos locales: se pierden al recargar, suficiente para esta feature simple.
+const favorites = ref([])
 
-// la función computed evita habilitar conversiones cuando faltan datos o ya hay una en curso.
+// Evita habilitar conversiones cuando faltan datos o ya hay una en curso.
 const canConvert = computed(() => {
   return amount.value !== '' && fromCurrency.value && toCurrency.value && !converting.value
+})
+
+// Detecta si el par visible ya fue guardado como favorito.
+const isCurrentFavorite = computed(() => {
+  return favorites.value.some((favorite) => {
+    return favorite.from === fromCurrency.value && favorite.to === toCurrency.value
+  })
+})
+
+// Controla cuándo se puede guardar un favorito nuevo.
+const canSaveFavorite = computed(() => {
+  return (
+    fromCurrency.value &&
+    toCurrency.value &&
+    fromCurrency.value !== toCurrency.value &&
+    !isCurrentFavorite.value &&
+    !loadingCurrencies.value &&
+    !converting.value
+  )
 })
 
 // Al montar el componente cargamos monedas y dejamos una conversion inicial lista.
@@ -64,15 +88,32 @@ async function swapCurrencies() {
   await handleConvert()
 }
 
-// Formatea el numero para que el resultado sea legible.
-function formatAmount(value, currency) {
-  return `${Number(value).toLocaleString('es-CL', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })} ${currency}`
+function addFavorite() {
+  // Guardamos solo el par de monedas, no el monto.
+  if (!canSaveFavorite.value) return
+
+  favorites.value.push({
+    from: fromCurrency.value,
+    to: toCurrency.value
+  })
 }
 
-// Normaliza errores desconocidos a un mensaje en pantalla.
+async function selectFavorite(favorite) {
+  // Usar un favorito actualiza el conversor principal y conserva el monto actual.
+  fromCurrency.value = favorite.from
+  toCurrency.value = favorite.to
+
+  await handleConvert()
+}
+
+function removeFavorite(favoriteToRemove) {
+  // Se filtra por origen/destino porque cada par favorito es unico.
+  favorites.value = favorites.value.filter((favorite) => {
+    return favorite.from !== favoriteToRemove.from || favorite.to !== favoriteToRemove.to
+  })
+}
+
+// Normaliza errores desconocidos.
 function getErrorMessage(currentError) {
   return currentError instanceof Error ? currentError.message : 'Ocurrio un error inesperado.'
 }
@@ -94,14 +135,13 @@ function getErrorMessage(currentError) {
     </label>
 
     <div class="currency-grid">
-      <label class="field">
-        <span>Moneda origen</span>
-        <select v-model="fromCurrency" :disabled="loadingCurrencies" @change="handleConvert">
-          <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
-            {{ currency.code }} - {{ currency.name }}
-          </option>
-        </select>
-      </label>
+      <CurrencySelect
+        v-model="fromCurrency"
+        label="Moneda origen"
+        :currencies="currencies"
+        :disabled="loadingCurrencies"
+        @change="handleConvert"
+      />
 
       <button
         class="swap-button"
@@ -114,29 +154,35 @@ function getErrorMessage(currentError) {
         ⇄
       </button>
 
-      <label class="field">
-        <span>Moneda destino</span>
-        <select v-model="toCurrency" :disabled="loadingCurrencies" @change="handleConvert">
-          <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
-            {{ currency.code }} - {{ currency.name }}
-          </option>
-        </select>
-      </label>
+      <CurrencySelect
+        v-model="toCurrency"
+        label="Moneda destino"
+        :currencies="currencies"
+        :disabled="loadingCurrencies"
+        @change="handleConvert"
+      />
     </div>
 
-    <button class="primary-button" type="submit" :disabled="!canConvert || loadingCurrencies">
-      {{ converting ? 'Convirtiendo...' : 'Convertir' }}
-    </button>
+    <div class="actions-row">
+      <button class="primary-button" type="submit" :disabled="!canConvert || loadingCurrencies">
+        {{ converting ? 'Convirtiendo...' : 'Convertir' }}
+      </button>
+
+      <button class="secondary-button" type="button" :disabled="!canSaveFavorite" @click="addFavorite">
+        {{ isCurrentFavorite ? 'Favorito guardado' : 'Guardar favorito' }}
+      </button>
+    </div>
 
     <p v-if="loadingCurrencies" class="status">Cargando monedas disponibles...</p>
     <p v-else-if="error" class="status status-error">{{ error }}</p>
 
-    <section v-if="result" class="result-box" aria-live="polite">
-      <span>Resultado</span>
-      <strong>{{ formatAmount(result.convertedAmount, result.to) }}</strong>
-      <small>
-        {{ formatAmount(result.amount, result.from) }} = {{ formatAmount(result.convertedAmount, result.to) }}
-      </small>
-    </section>
+    <ConversionResult v-if="result" :result="result" />
+
+    <FavoritePairs
+      :favorites="favorites"
+      :disabled="loadingCurrencies || converting"
+      @select="selectFavorite"
+      @remove="removeFavorite"
+    />
   </form>
 </template>
