@@ -25,9 +25,9 @@ Proyecto de conversion de monedas usando dos frameworks Vue y Svelte.
 
 ## Objetivo
 
-MoneyExchange permite ingresar un monto, seleccionar una moneda de origen, seleccionar una moneda de destino y mostrar la conversion usando tasas reales desde Frankfurter API.
+Se permite ingresar un monto, seleccionar una moneda de origen, seleccionar una moneda de destino y mostrar la conversión usando tasas reales.
 
-## Ejecutar localmente
+## Ejecución local
 
 Instalar dependencias:
 
@@ -57,14 +57,20 @@ Abre `http://localhost:5174`.
 vue/
 └── src/
     ├── components/
-    │   └── CurrencyConverter.vue
+    │   ├── CurrencyConverter.vue
+    │   ├── CurrencySelect.vue
+    │   ├── ConversionResult.vue
+    │   └── FavoritePairs.vue
     ├── services/
     └── stores/
 
 svelte/
 └── src/
     ├── components/
-    │   └── CurrencyConverter.svelte
+    │   ├── CurrencyConverter.svelte
+    │   ├── CurrencySelect.svelte
+    │   ├── ConversionResult.svelte
+    │   └── FavoritePairs.svelte
     ├── services/
     └── stores/
 ```
